@@ -14,6 +14,7 @@ target_sources(gfx-3d-learning PUBLIC
     ${APP_CODE_DIR}/main.cpp
     ${APP_CODE_DIR}/render/vulkan/VulkanInstance.cpp
     ${APP_CODE_DIR}/render/vulkan/VulkanPhysicalDevice.cpp
+    ${APP_CODE_DIR}/render/vulkan/VulkanLogicalDevice.cpp
 )
 target_include_directories(gfx-3d-learning PUBLIC
     ${APP_CODE_DIR}

@@ -1,12 +1,11 @@
 #include <render/vulkan/VulkanInstance.hpp>
 #include <vulkan/vulkan_core.h>
 #include <SDL2/SDL_vulkan.h>
+
 #include <basic/defs.hpp>
-
 #include <stdio.h>
-#include <vector>
 
-bool VulkanInstance::Init(SDL_Window *window) {
+bool VulkanInstance::Init(SDL_Window *window, std::vector<const char*> validation_layers, bool use_validation_layers) {
     VkResult vk_result;
 
     VkApplicationInfo app_info = {};
@@ -31,13 +30,12 @@ bool VulkanInstance::Init(SDL_Window *window) {
         printf("ext_name = %s\n", ext_names[i]);
     }
 
-#if NDEBUG
     uint32_t layer_count = 0;
     const char **layer_names = 0;
-#else
-    const char *layer_names[] = {"VK_LAYER_KHRONOS_validation"};
-    uint32_t layer_count = ARRAY_COUNT(layer_names);
-#endif
+    if (use_validation_layers) {
+        layer_count = validation_layers.size();
+        layer_names = validation_layers.data();
+    }
 
     VkInstanceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

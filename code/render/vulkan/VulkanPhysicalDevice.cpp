@@ -1,24 +1,34 @@
 #include <render/vulkan/VulkanPhysicalDevice.hpp>
 #include <vulkan/vulkan_core.h>
 
-struct QueueFamilyIndicies {
-    uint32_t graphics;
-};
-
 bool VulkanPhysicalDevice::Init(VulkanInstance& instance) {
     m_Device = VK_NULL_HANDLE;
-    if (!ChooseDevice(instance, &m_Device)) {
+    if (!PickDevice(instance, m_Device)) {
         return false;
     }
-
-    VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(m_Device, &props);
-    printf("chosen device: %s\n", props.deviceName);
 
     return true;
 }
 
-bool VulkanPhysicalDevice::ChooseDevice(VulkanInstance& instance, VkPhysicalDevice *device) {
+QueueFamilyIndices VulkanPhysicalDevice::GetQueueFamilyIndices() {
+    QueueFamilyIndices queue_family_indices;
+
+    uint32_t prop_count = 0;
+    VkQueueFamilyProperties *props;
+    vkGetPhysicalDeviceQueueFamilyProperties(m_Device, &prop_count, nullptr);
+    props = (VkQueueFamilyProperties*)alloca(prop_count * sizeof(VkQueueFamilyProperties));
+    vkGetPhysicalDeviceQueueFamilyProperties(m_Device, &prop_count, props);
+
+    for (int i = 0; i < prop_count; i++) {
+        if (props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            queue_family_indices.graphics = i;
+        }
+    }
+
+    return queue_family_indices;
+}
+
+bool VulkanPhysicalDevice::PickDevice(VulkanInstance& instance, VkPhysicalDevice& device) {
     VkResult vk_result;
 
     uint32_t device_count;
@@ -34,7 +44,7 @@ bool VulkanPhysicalDevice::ChooseDevice(VulkanInstance& instance, VkPhysicalDevi
     }
 
     int32_t best_score_index = -1;
-    int32_t best_score_value = -1;
+    int32_t best_score_value = 0;
     for (int i = 0; i < device_count; i++) {
         int score = ScoreDevice(devices[i]);
         if (score > best_score_value) {
@@ -46,17 +56,14 @@ bool VulkanPhysicalDevice::ChooseDevice(VulkanInstance& instance, VkPhysicalDevi
         return false;
     }
 
-    *device = devices[best_score_index];
+    device = devices[best_score_index];
     return true;
 }
 
 int VulkanPhysicalDevice::ScoreDevice(VkPhysicalDevice device) {
     int score = 0;
 
-    std::array<VkQueueFlagBits, 1> required_queue_families = {
-        VK_QUEUE_GRAPHICS_BIT
-    };
-    if (!SupportsQueueFamilies(device, required_queue_families)) {
+    if (!SupportsQueueFamilies(device)) {
         return 0;
     }
 
@@ -79,25 +86,19 @@ int VulkanPhysicalDevice::ScoreDevice(VkPhysicalDevice device) {
     return score;
 }
 
-bool VulkanPhysicalDevice::SupportsQueueFamilies(VkPhysicalDevice device, std::array<VkQueueFlagBits, 1>& flags) {
+bool VulkanPhysicalDevice::SupportsQueueFamilies(VkPhysicalDevice device) {
     uint32_t prop_count = 0;
     VkQueueFamilyProperties *props;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &prop_count, nullptr);
     props = (VkQueueFamilyProperties*)alloca(prop_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(device, &prop_count, props);
 
-    for (auto flag : flags) {
-        bool has_flag = false;
-        for (int i = 0; i < prop_count; i++) {
-            if (props[i].queueFlags & flag) {
-                has_flag = true;
-                break;
-            }
-        }
-        if (!has_flag) {
-            return false;
+    bool has_graphics = false;
+    for (int i = 0; i < prop_count; i++) {
+        if (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
